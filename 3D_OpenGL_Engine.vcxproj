@@ -145,15 +145,22 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="glad.c" />
-    <ClCompile Include="objectClasses.cpp" />
+    <ClCompile Include="renderobjects.cpp" />
     <ClCompile Include="Render.cpp" />
     <ClCompile Include="Source.cpp" />
+    <ClCompile Include="stb_image.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="glad.h" />
     <ClInclude Include="khrplatform.h" />
-    <ClInclude Include="objectClasses.h" />
+    <ClInclude Include="renderobjects.h" />
     <ClInclude Include="Render.h" />
+    <ClInclude Include="shaders.h" />
+    <ClInclude Include="stb_image.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="example.fs" />
+    <None Include="example.vs" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
