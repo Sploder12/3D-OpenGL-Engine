@@ -1,6 +1,8 @@
 #pragma once
 #include "renderobjects.h"
 
+void doClear(bool val);
+
 bool compileShaders();
 
 std::map<std::string, Shader>* getShaders();

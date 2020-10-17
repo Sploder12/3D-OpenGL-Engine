@@ -35,7 +35,7 @@ bool removeFromMemory(std::string UID, bool del = false);
 class renderobject
 {
 private:
-	unsigned int VAO, VBO, drawType;
+	unsigned int drawType;
 	Shader * shader;
 public:
 	bool updated = false;

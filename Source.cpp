@@ -61,6 +61,11 @@ int main()
     renderobject triangle(vertices, 3, 6, VAO, VBO, &shaders->at("example"));
     triangle.addToRendering("example");
 
+    renderobject triangle2(vertices, 3, 6, VAO, VBO, &shaders->at("example"));
+    triangle2.addToRendering("example2");
+    triangle2.scale(glm::vec3(0.5f, 0.5f, 0.5f));
+    triangle2.translate(glm::vec3(0.0, -0.5f, 0.0f));
+
     // position attribute
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
@@ -71,13 +76,14 @@ int main()
     glfwSwapInterval(0); //this is Vsync
 
     double time = glfwGetTime();
-
+    doClear(false);
     while (!glfwWindowShouldClose(window)) //main loop of the program
     {
         time = glfwGetTime();
         processInput(window);
         
         render(window, VAO, VBO);
+        triangle2.rotate(-0.01f, glm::vec3(1.0f, 0.0f, 0.0f));
         triangle.rotate(0.01f, glm::vec3(0.0f, 1.0f, 0.0f));
 
         glfwSwapBuffers(window);

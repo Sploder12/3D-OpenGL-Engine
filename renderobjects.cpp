@@ -51,7 +51,7 @@ bool removeFromMemory(std::string UID, bool del)
 
 //Base Object
 renderobject::renderobject(float vertices[], size_t vertCnt, size_t stride, unsigned int VAO, unsigned int VBO, Shader * shader, unsigned int drawType) :
-	vertices(vertices), vertCnt(vertCnt), stride(stride), VAO(VAO), VBO(VBO), shader(shader), drawType(drawType)
+	vertices(vertices), vertCnt(vertCnt), stride(stride), shader(shader), drawType(drawType)
 {
 	glBindVertexArray(VAO);
 
@@ -103,18 +103,15 @@ void renderobject::rotate(float degrees, glm::vec3 axis)
 
 void renderobject::draw()
 {
-	if (updated) //used to avoid redrawing stuff and abusing the cpu
-	{
-		shader->use();
-		unsigned int transformLoc = glGetUniformLocation(shader->ID, "transform");
-		glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(trans));
+	shader->use();
+	unsigned int transformLoc = glGetUniformLocation(shader->ID, "transform");
+	glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(trans));
 
-		glBindVertexArray(this->VAO);
-		glBindBuffer(GL_ARRAY_BUFFER, this->VBO);
+	//glBindVertexArray(this->VAO);
+	//glBindBuffer(GL_ARRAY_BUFFER, this->VBO);
 		
-		glDrawArrays(GL_TRIANGLES, 0, 3);
-		this->updated = false;
-	}
+	glDrawArrays(GL_TRIANGLES, 0, 3);
+	this->updated = false;
 }
 
 renderobject::~renderobject()

@@ -2,6 +2,14 @@
 
 std::map<std::string, Shader> shaders;
 
+//options
+bool doclear = true;
+
+void doClear(bool val)
+{
+	doclear = val;
+}
+
 bool compileShaders()
 {
 	bool res = true;
@@ -16,8 +24,11 @@ std::map<std::string, Shader>* getShaders()
 
 void clearScreen(float red, float green, float blue, float alpha)
 {
-	glClearColor(red, green, blue, alpha);
-	glClear(GL_COLOR_BUFFER_BIT);
+	if (doclear)
+	{
+		glClearColor(red, green, blue, alpha);
+		glClear(GL_COLOR_BUFFER_BIT);
+	}
 }
 
 void render(GLFWwindow* window, unsigned int VAO, unsigned int VBO)
