@@ -159,8 +159,10 @@
     <ClInclude Include="stb_image.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="example.fs" />
-    <None Include="example.vs" />
+    <None Include="basicEX.fs" />
+    <None Include="basicEX.vs" />
+    <None Include="basicTexEX.fs" />
+    <None Include="basicTexEX.vs" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

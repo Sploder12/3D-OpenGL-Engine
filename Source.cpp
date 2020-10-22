@@ -45,53 +45,70 @@ int main()
 
     compileShaders();
     shaders = getShaders();
-
-    unsigned int VBO, VAO;
-    glGenVertexArrays(1, &VAO);
-    glGenBuffers(1, &VBO);
-
     
     float vertices[] = {
-        // positions         // colors
-         0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f,  // bottom right
-        -0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,  // bottom left
-         0.0f,  0.5f, 0.0f,  0.0f, 0.0f, 1.0f   // top 
+        // positions         // colors         
+         0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f, // bottom right
+        -0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f, // bottom left
+         0.0f,  0.5f, 0.0f,  0.0f, 0.0f, 1.0f  // top 
     };
     
-    renderobject triangle(vertices, 3, 6, VAO, VBO, &shaders->at("example"));
-    triangle.addToRendering("example");
+    renderer::Basic triangle(vertices, 3, 6, &shaders->at("basicEX"));
+    triangle.addToActive("basicEX1");
 
-    renderobject triangle2(vertices, 3, 6, VAO, VBO, &shaders->at("example"));
-    triangle2.addToRendering("example2");
+    renderer::Basic triangle2(vertices, 3, 6, &shaders->at("basicEX"));
+    triangle2.addToActive("basicEX2");
     triangle2.scale(glm::vec3(0.5f, 0.5f, 0.5f));
     triangle2.translate(glm::vec3(0.0, -0.5f, 0.0f));
+    
+    
+    float vertices2[] = {
+        // positions          // colors           // texture coords
+        0.5f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f, // top right
+        0.5f, -0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f, // bottom right
+       -0.5f,  0.5f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f,  // top left 
 
-    // position attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-    // color attribute
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
+        0.5f, -0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f, // bottom right
+       -0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f, // bottom left
+       -0.5f,  0.5f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f  // top left
+    };
+    
+    renderer::texParam2D params = renderer::texParam2D(GL_REPEAT, GL_REPEAT, GL_LINEAR, GL_LINEAR);
+    renderer::texture2D texture = renderer::texture2D(&params, "container.jpg");
+
+    renderer::BasicTextured crate(vertices2, 6, 8, &shaders->at("basicTexEX"), &texture);
+    crate.addToActive("basicTexEX1");
+    crate.translate(glm::vec3(-0.5f, 0.5f, 0.0f));
+    crate.scale(glm::vec3(0.5f, 0.5f, 0.5f));
 
     glfwSwapInterval(0); //this is Vsync
 
     double time = glfwGetTime();
-    doClear(false);
+    double prevtime = time;
+    int fps = 0;
+    //doClear(false);
     while (!glfwWindowShouldClose(window)) //main loop of the program
     {
         time = glfwGetTime();
         processInput(window);
         
-        render(window, VAO, VBO);
-        triangle2.rotate(-0.01f, glm::vec3(1.0f, 0.0f, 0.0f));
-        triangle.rotate(0.01f, glm::vec3(0.0f, 1.0f, 0.0f));
+        if (time - prevtime >= 1)
+        {
+            std::cout << fps;
+            fps = 0;
+            prevtime++;
+        }
+
+        render(window);
+        triangle2.rotate(-2.0f, glm::vec3(1.0f, 0.0f, 0.0f));
+        triangle.rotate(2.0f, glm::vec3(0.0f, 1.0f, 0.0f));
+        crate.rotate(2.0f, glm::vec3(0.0f, 0.0f, 1.0f));
 
         glfwSwapBuffers(window);
+        fps++;
+
         glfwPollEvents();
     }
-
-    glDeleteVertexArrays(1, &VAO);
-    glDeleteBuffers(1, &VBO);
 
     glfwTerminate();
     return 0;

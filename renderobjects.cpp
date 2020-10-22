@@ -1,14 +1,16 @@
 #include "renderobjects.h"
 
-texture2D::texture2D(texParam2D params, std::string file)
+renderer::texture2D::texture2D(texParam2D* params, std::string file, bool flip)
 {
 	glGenTextures(1, &textureID);
 	glBindTexture(GL_TEXTURE_2D, textureID);
 	// set the texture wrapping/filtering options (on the currently bound texture object)
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, params.wrapS);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, params.wrapT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, params.filterMin);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, params.filterMag);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, params->wrapS);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, params->wrapT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, params->filterMin);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, params->filterMag);
+
+	stbi_set_flip_vertically_on_load(!flip);
 	// load and generate the texture
 	unsigned char* data = stbi_load(file.c_str(), &width, &height, &nrChannels, 0);
 	if (data)
@@ -23,109 +25,149 @@ texture2D::texture2D(texParam2D params, std::string file)
 	stbi_image_free(data);
 }
 
-texture2D::~texture2D() 
+renderer::texture2D::~texture2D()
 {
 
 }
 
-std::map<std::string, renderobject*> renderObjects; //These are actively rendered
-std::map<std::string, renderobject*> memoryObjects; //These are not actively rendered but stored for later
+std::map<std::string, renderer::Base*> activeObjects; //These are actively rendered
+std::map<std::string, renderer::Base*> memoryObjects; //These are not actively rendered but stored for later
 
-bool removeFromRendering(std::string UID, bool del)
+bool renderer::removeFromActive(std::string UID, bool del)
 {
 	if (del)
 	{
-		delete renderObjects.at(UID);
+		delete activeObjects.at(UID);
 	}
-	return (renderObjects.erase(UID) > 0) ? false : true;
+	return (activeObjects.erase(UID) > 0) ? false : true;
 }
 
-bool removeFromMemory(std::string UID, bool del)
+bool renderer::removeFromMemory(std::string UID, bool del)
 {
 	if (del)
 	{
-		delete renderObjects.at(UID);
+		delete activeObjects.at(UID);
 	}
 	return (memoryObjects.erase(UID) > 0)? false: true;
 }
 
 //Base Object
-renderobject::renderobject(float vertices[], size_t vertCnt, size_t stride, unsigned int VAO, unsigned int VBO, Shader * shader, unsigned int drawType) :
-	vertices(vertices), vertCnt(vertCnt), stride(stride), shader(shader), drawType(drawType)
+renderer::Base::Base(Shader * shader, unsigned int drawType) :
+	shader(shader), drawType(drawType)
 {
+	glGenVertexArrays(1, &VAO);
+	glGenBuffers(1, &VBO);
 	glBindVertexArray(VAO);
 
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, 4*stride*vertCnt, vertices, drawType);
 }
 
-bool renderobject::addToRendering(std::string UID)
+bool renderer::Base::addToActive(std::string UID)
 {
 	this->UID = UID;
-	return renderObjects.insert(std::pair<std::string, renderobject*>(UID, this)).second;
+	return activeObjects.insert(std::pair<std::string, renderer::Base*>(UID, this)).second;
 }
 
-bool renderobject::addToMemory(std::string UID)
+bool renderer::Base::addToMemory(std::string UID)
 {
 	this->UID = UID;
-	return memoryObjects.insert(std::pair<std::string, renderobject*>(UID, this)).second;
+	return memoryObjects.insert(std::pair<std::string, renderer::Base*>(UID, this)).second;
 }
 
-bool renderobject::transferToRendering()
+bool renderer::Base::transferToActive()
 {
 	bool tmp = removeFromMemory(this->UID);
-	return this->addToRendering(this->UID) && tmp;
+	return this->addToActive(this->UID) && tmp;
 }
 
-bool renderobject::transferToMemory()
+bool renderer::Base::transferToMemory()
 {
-	bool tmp = removeFromRendering(this->UID);
+	bool tmp = removeFromActive(this->UID);
 	return this->addToMemory(this->UID) && tmp;
 }
 
-void renderobject::translate(glm::vec3 transxyz)
+void renderer::Base::translate(glm::vec3 transxyz)
 {
 	trans = glm::translate(trans, transxyz);
 	this->updated = true;
 }
 
-void renderobject::scale(glm::vec3 transxyz)
+void renderer::Base::scale(glm::vec3 transxyz)
 {
 	trans = glm::scale(trans, transxyz);
 	this->updated = true;
 }
 
-void renderobject::rotate(float degrees, glm::vec3 axis)
+void renderer::Base::rotate(float degrees, glm::vec3 axis)
 {
 	trans = glm::rotate(trans, glm::radians(degrees), axis);
 	this->updated = true;
 }
 
-void renderobject::draw()
+renderer::Basic::Basic(float vertices[], GLsizei vertCnt, GLsizei stride, Shader* shader, unsigned int drawType) :
+	renderer::Base(shader, drawType), vertices(vertices), vertCnt(vertCnt)
+{
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+	glEnableVertexAttribArray(0);
+	// color attribute
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+	glEnableVertexAttribArray(1);
+
+	glBufferData(GL_ARRAY_BUFFER, 4*vertCnt*stride, vertices, drawType);
+}
+
+void renderer::Basic::draw()
 {
 	shader->use();
+	glBindVertexArray(VAO);
+
 	unsigned int transformLoc = glGetUniformLocation(shader->ID, "transform");
 	glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(trans));
 
-	//glBindVertexArray(this->VAO);
-	//glBindBuffer(GL_ARRAY_BUFFER, this->VBO);
-		
-	glDrawArrays(GL_TRIANGLES, 0, 3);
+	glDrawArrays(GL_TRIANGLES, 0, vertCnt);
+
 	this->updated = false;
 }
 
-renderobject::~renderobject()
+renderer::BasicTextured::BasicTextured(float vertices[], GLsizei vertCnt, GLsizei stride, Shader* shader, texture2D* texture, unsigned int drawType):
+	renderer::Base(shader, drawType), vertices(vertices), vertCnt(vertCnt), texture(texture)
+{
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+	glEnableVertexAttribArray(0);
+	// color attribute
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+	glEnableVertexAttribArray(1);
+	// texture coord attribute
+	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+	glEnableVertexAttribArray(2);
+
+	glBufferData(GL_ARRAY_BUFFER, 4 * vertCnt * stride, vertices, drawType);
+}
+
+void renderer::BasicTextured::draw()
 {
 
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, this->texture->textureID);
+	
+	shader->use();
+	glBindVertexArray(VAO);
+	unsigned int uniformLoc = glGetUniformLocation(shader->ID, "transform");
+	glUniformMatrix4fv(uniformLoc, 1, GL_FALSE, glm::value_ptr(trans));
+
+	glDrawArrays(GL_TRIANGLES, 0, vertCnt);
+
+	this->updated = false;
 }
+
 
 //has to be defined after object
-std::map<std::string, renderobject*>* getRendering()
+std::map<std::string, renderer::Base*>* renderer::getActive()
 {
-	return &renderObjects;
+	return &activeObjects;
 }
 
-std::map<std::string, renderobject*>* getMemory()
+std::map<std::string, renderer::Base*>* renderer::getMemory()
 {
 	return &memoryObjects;
 }

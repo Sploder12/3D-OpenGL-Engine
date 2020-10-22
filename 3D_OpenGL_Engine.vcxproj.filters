@@ -55,10 +55,16 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="example.vs">
+    <None Include="basicEX.fs">
       <Filter>Shaders</Filter>
     </None>
-    <None Include="example.fs">
+    <None Include="basicEX.vs">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="basicTexEX.vs">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="basicTexEX.fs">
       <Filter>Shaders</Filter>
     </None>
   </ItemGroup>

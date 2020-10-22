@@ -11,62 +11,80 @@
 #include "shaders.h"
 #include <map>
 
-struct texParam2D
+namespace renderer
 {
-	unsigned int wrapS, wrapT, filterMin, filterMag;
-	texParam2D(unsigned int wrapS, unsigned int wrapT, unsigned int filterMin, unsigned int filterMag) :
-	wrapS(wrapS), wrapT(wrapT), filterMin(filterMin), filterMag(filterMag) {}
+	struct texParam2D
+	{
+		unsigned int wrapS, wrapT, filterMin, filterMag;
+		texParam2D(unsigned int wrapS, unsigned int wrapT, unsigned int filterMin, unsigned int filterMag) :
+			wrapS(wrapS), wrapT(wrapT), filterMin(filterMin), filterMag(filterMag) {}
 
-};
+	};
 
-class texture2D
-{
-public:
-	int width, height, nrChannels;
-	unsigned int textureID;
-	texture2D(texParam2D params, std::string file);
+	class texture2D
+	{
+	public:
+		int width, height, nrChannels;
+		unsigned int textureID;
+		texture2D(texParam2D* params, std::string file, bool flip = false);
 
-	~texture2D();
-};
+		~texture2D();
+	};
 
-bool removeFromRendering(std::string UID, bool del = false);
-bool removeFromMemory(std::string UID, bool del = false);
+	
+	bool removeFromActive(std::string UID, bool del = false);
+	bool removeFromMemory(std::string UID, bool del = false);
 
-class renderobject
-{
-private:
-	unsigned int drawType;
-	Shader * shader;
-public:
-	bool updated = false;
-	float * vertices;
-	size_t vertCnt;
-	size_t stride;
-	glm::mat4 trans = glm::mat4(1.0f);
-	std::string UID = "";	
+	struct Base
+	{
+		Shader* shader;
+		unsigned int VAO, VBO, drawType;
+		bool updated = false;
+		glm::mat4 trans = glm::mat4(1.0f);
+		std::string UID = "";
 
-	renderobject(float vertices[], size_t vertCnt, size_t stride, unsigned int VAO, unsigned int VBO, Shader * shader, unsigned int drawType = GL_DYNAMIC_DRAW);
+		Base(Shader* shader, unsigned int drawType = GL_STATIC_DRAW);
 
-	bool addToRendering(std::string UID);
+		bool addToActive(std::string UID);
 
-	bool addToMemory(std::string UID);
+		bool addToMemory(std::string UID);
 
-	bool transferToRendering();
+		bool transferToActive();
 
-	bool transferToMemory();
+		bool transferToMemory();
 
-	void translate(glm::vec3 transxyz);
+		void translate(glm::vec3 transxyz);
 
-	void scale(glm::vec3 scalexyz);
+		void scale(glm::vec3 scalexyz);
 
-	void rotate(float degrees, glm::vec3 axis);
+		void rotate(float degrees, glm::vec3 axis);
 
-	void draw();
+		virtual void draw() = 0;
+	};
 
-	~renderobject();
-};
+	struct Basic : Base
+	{
+		float* vertices;
+		GLsizei vertCnt;
 
-std::map<std::string, renderobject*>* getRendering();
+		Basic(float vertices[], GLsizei vertCnt, GLsizei stride, Shader* shader, unsigned int drawType = GL_DYNAMIC_DRAW);
 
-std::map<std::string, renderobject*>* getMemory();
+		void draw();
+	};
+
+	struct BasicTextured : Base
+	{
+		float* vertices;
+		GLsizei vertCnt;
+		texture2D* texture;
+
+		BasicTextured(float vertices[], GLsizei vertCnt, GLsizei stride, Shader* shader, texture2D* texture, unsigned int drawType = GL_DYNAMIC_DRAW);
+
+		void draw();
+	};
+
+
+	std::map<std::string, Base*>* getActive();
+	std::map<std::string, Base*>* getMemory();
+}
 
