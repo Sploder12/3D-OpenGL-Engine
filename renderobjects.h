@@ -11,8 +11,33 @@
 #include "shaders.h"
 #include <map>
 
+
+
 namespace renderer
 {
+	#define SWIDTH 800
+	#define SHEIGHT 600
+
+	glm::vec3 getCameraPos();
+	void setCameraPos(glm::vec3 camPos);
+	
+	glm::vec3 getCameraFront();
+	void setCameraFront(glm::vec3 camFron);
+
+	glm::vec3 getCameraUp();
+	void setCameraUp(glm::vec3 camU);
+
+
+	float getYaw();
+	void setYaw(float ya);
+
+	float getPitch();
+	void setPitch(float pitc);
+
+	float getFov();
+	void setFov(float fo);
+
+
 	struct texParam2D
 	{
 		unsigned int wrapS, wrapT, filterMin, filterMag;

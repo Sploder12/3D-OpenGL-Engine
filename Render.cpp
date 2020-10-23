@@ -15,6 +15,7 @@ bool compileShaders()
 	bool res = true;
 	res &= shaders.insert(std::pair<std::string, Shader>("basicEX", Shader("basicEX.vs", "basicEX.fs"))).second;
 	res &= shaders.insert(std::pair<std::string, Shader>("basicTexEX", Shader("basicTexEX.vs", "basicTexEX.fs"))).second;
+
 	return res;
 }
 
@@ -28,7 +29,7 @@ void clearScreen(float red, float green, float blue, float alpha)
 	if (doclear)
 	{
 		glClearColor(red, green, blue, alpha);
-		glClear(GL_COLOR_BUFFER_BIT);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	}
 }
 

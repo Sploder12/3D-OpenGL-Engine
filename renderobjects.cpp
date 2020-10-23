@@ -1,5 +1,32 @@
 #include "renderobjects.h"
 
+glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
+glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
+glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
+
+glm::vec3 renderer::getCameraPos() { return cameraPos; }
+void renderer::setCameraPos(glm::vec3 camPos) { cameraPos = camPos; }
+
+glm::vec3 renderer::getCameraFront() { return cameraFront; }
+void renderer::setCameraFront(glm::vec3 camFron) { cameraFront = camFron; }
+
+glm::vec3 renderer::getCameraUp() { return cameraUp; }
+void renderer::setCameraUp(glm::vec3 camU) { cameraUp = camU; }
+
+float yaw = -90.0f;	// yaw is initialized to -90.0 degrees since a yaw of 0.0 results in a direction vector pointing to the right so we initially rotate a bit to the left.
+float pitch = 0.0f;
+float fov = 45.0f;
+
+float renderer::getYaw() { return yaw; }
+void renderer::setYaw(float ya) { yaw = ya; }
+
+float renderer::getPitch() { return pitch; }
+void renderer::setPitch(float pitc) { pitch = pitc;  }
+
+float renderer::getFov() { return fov; }
+void renderer::setFov(float fo) { fov = fo;  }
+
+
 renderer::texture2D::texture2D(texParam2D* params, std::string file, bool flip)
 {
 	glGenTextures(1, &textureID);
@@ -124,6 +151,13 @@ void renderer::Basic::draw()
 	unsigned int transformLoc = glGetUniformLocation(shader->ID, "transform");
 	glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(trans));
 
+	glm::mat4 projection = glm::perspective(glm::radians(fov), (float)SWIDTH / (float)SHEIGHT, 0.1f, 100.0f);
+	shader->setMat4("projection", projection);
+
+	// camera/view transformation
+	glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
+	shader->setMat4("view", view);
+
 	glDrawArrays(GL_TRIANGLES, 0, vertCnt);
 
 	this->updated = false;
@@ -154,6 +188,13 @@ void renderer::BasicTextured::draw()
 	glBindVertexArray(VAO);
 	unsigned int uniformLoc = glGetUniformLocation(shader->ID, "transform");
 	glUniformMatrix4fv(uniformLoc, 1, GL_FALSE, glm::value_ptr(trans));
+
+	glm::mat4 projection = glm::perspective(glm::radians(fov), (float)SWIDTH / (float)SHEIGHT, 0.1f, 100.0f);
+	shader->setMat4("projection", projection);
+
+	// camera/view transformation
+	glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
+	shader->setMat4("view", view);
 
 	glDrawArrays(GL_TRIANGLES, 0, vertCnt);
 
