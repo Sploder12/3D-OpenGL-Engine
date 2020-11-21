@@ -1,31 +1,43 @@
 #include "renderobjects.h"
 
-glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
-glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
-glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
+camera* curCam;
 
-glm::vec3 renderer::getCameraPos() { return cameraPos; }
-void renderer::setCameraPos(glm::vec3 camPos) { cameraPos = camPos; }
+camera* renderer::getCamera() { return curCam; }
+void renderer::setCamera(camera* cam) { curCam = cam; }
 
-glm::vec3 renderer::getCameraFront() { return cameraFront; }
-void renderer::setCameraFront(glm::vec3 camFron) { cameraFront = camFron; }
+glm::vec3 renderer::faceNormal(glm::vec3 p1, glm::vec3 p2, glm::vec3 p3)
+{
+	glm::vec3 v1 = p2 - p1;
+	glm::vec3 v2 = p3 - p1;
 
-glm::vec3 renderer::getCameraUp() { return cameraUp; }
-void renderer::setCameraUp(glm::vec3 camU) { cameraUp = camU; }
+	return glm::cross(v1, v2);
+}
 
-float yaw = -90.0f;	// yaw is initialized to -90.0 degrees since a yaw of 0.0 results in a direction vector pointing to the right so we initially rotate a bit to the left.
-float pitch = 0.0f;
-float fov = 45.0f;
+float* renderer::genFaceNormals(float* verticies, unsigned int faceCnt)
+{
+	float * out = new float[faceCnt * 9];
+	for (unsigned int i = 0; i < faceCnt; i++)
+	{
+		glm::vec3 p1 = glm::vec3(verticies[i * 9], verticies[i * 9 + 1], verticies[i * 9 + 2]);
+		glm::vec3 p2 = glm::vec3(verticies[i * 9 + 3], verticies[i * 9 + 4], verticies[i * 9 + 5]);
+		glm::vec3 p3 = glm::vec3(verticies[i * 9 + 6], verticies[i * 9 + 7], verticies[i * 9 + 8]);
+		glm::vec3 norm = renderer::faceNormal(p1, p2, p3);
 
-float renderer::getYaw() { return yaw; }
-void renderer::setYaw(float ya) { yaw = ya; }
-
-float renderer::getPitch() { return pitch; }
-void renderer::setPitch(float pitc) { pitch = pitc;  }
-
-float renderer::getFov() { return fov; }
-void renderer::setFov(float fo) { fov = fo;  }
-
+		if (i < 2) norm.z = -norm.z;
+		if (i > 5) norm.x = -norm.x;
+		if (i > 9) norm.y = -norm.y;
+		out[i * 9] = norm.x;
+		out[i * 9 + 1] = norm.y;
+		out[i * 9 + 2] = norm.z;
+		out[i * 9 + 3] = norm.x;
+		out[i * 9 + 4] = norm.y;
+		out[i * 9 + 5] = norm.z;
+		out[i * 9 + 6] = norm.x;
+		out[i * 9 + 7] = norm.y;
+		out[i * 9 + 8] = norm.z;
+	}
+	return out;
+}
 
 renderer::texture2D::texture2D(texParam2D* params, std::string file, bool flip)
 {
@@ -131,55 +143,82 @@ void renderer::Base::rotate(float degrees, glm::vec3 axis)
 	this->updated = true;
 }
 
-renderer::Basic::Basic(float vertices[], GLsizei vertCnt, GLsizei stride, Shader* shader, unsigned int drawType) :
-	renderer::Base(shader, drawType), vertices(vertices), vertCnt(vertCnt)
+renderer::Basic::Basic(float vertices[], float colors[], GLsizei vertCnt, Shader* shader, unsigned int drawType) :
+	renderer::Base(shader, drawType), vertices(vertices), colors(colors), vertCnt(vertCnt)
 {
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+	faceNormals = genFaceNormals(vertices, vertCnt/3);
+	//verts
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0);
 	// color attribute
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)(12 * vertCnt));
 	glEnableVertexAttribArray(1);
+	//facenormals
+	glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)(24 * vertCnt));
+	glEnableVertexAttribArray(2);
+	//data
+	glBufferData(GL_ARRAY_BUFFER, 36 * vertCnt, NULL, drawType);
 
-	glBufferData(GL_ARRAY_BUFFER, 4*vertCnt*stride, vertices, drawType);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, 12 * vertCnt, vertices);
+	glBufferSubData(GL_ARRAY_BUFFER, 12 * vertCnt, 12 * vertCnt, colors);
+	glBufferSubData(GL_ARRAY_BUFFER, 24 * vertCnt, 12 * vertCnt, faceNormals);
 }
 
 void renderer::Basic::draw()
 {
+	camera* cam = getCamera();
+
 	shader->use();
 	glBindVertexArray(VAO);
 
 	unsigned int transformLoc = glGetUniformLocation(shader->ID, "transform");
 	glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(trans));
-
-	glm::mat4 projection = glm::perspective(glm::radians(fov), (float)SWIDTH / (float)SHEIGHT, 0.1f, 100.0f);
+	
+	glm::mat4 projection = glm::perspective(float(glm::radians(cam->getFov())), (float)SWIDTH / (float)SHEIGHT, 0.1f, 100.0f);
 	shader->setMat4("projection", projection);
 
 	// camera/view transformation
-	glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
+	glm::mat4 view = glm::lookAt(cam->pos, cam->pos + cam->front, cam->up);
 	shader->setMat4("view", view);
+
+	shader->setVec3("lightColor", 1.0f, 1.0f, 1.0f);
+
+	shader->setVec3("lightPos", glm::vec3(1.1f, 0.0f, 1.1f));
+	shader->setVec3("viewPos", cam->pos);
 
 	glDrawArrays(GL_TRIANGLES, 0, vertCnt);
 
 	this->updated = false;
 }
 
-renderer::BasicTextured::BasicTextured(float vertices[], GLsizei vertCnt, GLsizei stride, Shader* shader, texture2D* texture, unsigned int drawType):
-	renderer::Base(shader, drawType), vertices(vertices), vertCnt(vertCnt), texture(texture)
+renderer::BasicTextured::BasicTextured(float vertices[], float colors[], float texturecords[], GLsizei vertCnt, Shader* shader, texture2D* texture, unsigned int drawType):
+	renderer::Base(shader, drawType), vertices(vertices), colors(colors), texturecords(texturecords), vertCnt(vertCnt), texture(texture)
 {
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+	faceNormals = genFaceNormals(vertices, vertCnt / 3);
+
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0);
-	// color attribute
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)(12*vertCnt));
 	glEnableVertexAttribArray(1);
-	// texture coord attribute
-	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+
+	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)(24*vertCnt));
 	glEnableVertexAttribArray(2);
 
-	glBufferData(GL_ARRAY_BUFFER, 4 * vertCnt * stride, vertices, drawType);
+	glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)(32*vertCnt));
+	glEnableVertexAttribArray(3);
+	
+	glBufferData(GL_ARRAY_BUFFER, 44*vertCnt, NULL, drawType);
+
+	glBufferSubData(GL_ARRAY_BUFFER, 0, 12 * vertCnt, vertices);
+	glBufferSubData(GL_ARRAY_BUFFER, 12 * vertCnt, 12 * vertCnt, colors);
+	glBufferSubData(GL_ARRAY_BUFFER, 24 * vertCnt, 8 * vertCnt, texturecords);
+	glBufferSubData(GL_ARRAY_BUFFER, 32 * vertCnt, 12 * vertCnt, faceNormals);
 }
 
 void renderer::BasicTextured::draw()
 {
+	camera* cam = getCamera();
 
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, this->texture->textureID);
@@ -189,18 +228,62 @@ void renderer::BasicTextured::draw()
 	unsigned int uniformLoc = glGetUniformLocation(shader->ID, "transform");
 	glUniformMatrix4fv(uniformLoc, 1, GL_FALSE, glm::value_ptr(trans));
 
-	glm::mat4 projection = glm::perspective(glm::radians(fov), (float)SWIDTH / (float)SHEIGHT, 0.1f, 100.0f);
+	glm::mat4 projection = glm::perspective(float(glm::radians(cam->getFov())), (float)SWIDTH / (float)SHEIGHT, 0.1f, 100.0f);
 	shader->setMat4("projection", projection);
 
 	// camera/view transformation
-	glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
+	glm::mat4 view = glm::lookAt(cam->pos, cam->pos + cam->front, cam->up);
 	shader->setMat4("view", view);
+
+	shader->setVec3("lightColor", 1.0f, 0.9f, 0.0f);
+
+	shader->setVec3("lightPos", glm::vec3(1.1f, 0.0f, 1.1f));
+	shader->setVec3("viewPos", cam->pos);
 
 	glDrawArrays(GL_TRIANGLES, 0, vertCnt);
 
 	this->updated = false;
 }
 
+renderer::PointLight::PointLight(float vertices[], GLsizei vertCnt, Shader* shader, glm::vec3 lightcolor, glm::vec3 lightpos, unsigned int drawType):
+	renderer::Base(shader, drawType), vertices(vertices), vertCnt(vertCnt),  lightpos(lightpos), lightcolor(lightcolor)
+{
+
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+	glEnableVertexAttribArray(0);
+
+	glBufferData(GL_ARRAY_BUFFER, 12*vertCnt, vertices, drawType);
+
+}
+
+void renderer::PointLight::translate(glm::vec3 transxyz)
+{
+	trans = glm::translate(trans, transxyz);
+	lightpos += transxyz;
+	this->updated = true;
+}
+
+void renderer::PointLight::draw()
+{
+	camera* cam = getCamera();
+	shader->use();
+	glBindVertexArray(VAO);
+	unsigned int uniformLoc = glGetUniformLocation(shader->ID, "transform");
+	glUniformMatrix4fv(uniformLoc, 1, GL_FALSE, glm::value_ptr(trans));
+
+	glm::mat4 projection = glm::perspective(float(glm::radians(cam->getFov())), (float)SWIDTH / (float)SHEIGHT, 0.1f, 100.0f);
+	shader->setMat4("projection", projection);
+
+	// camera/view transformation
+	glm::mat4 view = glm::lookAt(cam->pos, cam->pos + cam->front, cam->up);
+	shader->setMat4("view", view);
+
+	shader->setVec3("lightcolor", this->lightcolor);
+
+	glDrawArrays(GL_TRIANGLES, 0, vertCnt);
+
+	this->updated = false;
+}
 
 //has to be defined after object
 std::map<std::string, renderer::Base*>* renderer::getActive()

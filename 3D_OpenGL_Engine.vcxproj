@@ -144,6 +144,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Camera.cpp" />
     <ClCompile Include="glad.c" />
     <ClCompile Include="renderobjects.cpp" />
     <ClCompile Include="Render.cpp" />
@@ -151,6 +152,7 @@
     <ClCompile Include="stb_image.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="camera.h" />
     <ClInclude Include="glad.h" />
     <ClInclude Include="khrplatform.h" />
     <ClInclude Include="renderobjects.h" />
@@ -163,6 +165,8 @@
     <None Include="basicEX.vs" />
     <None Include="basicTexEX.fs" />
     <None Include="basicTexEX.vs" />
+    <None Include="pointLight.fs" />
+    <None Include="pointLight.vs" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

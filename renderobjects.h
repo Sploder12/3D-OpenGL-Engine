@@ -1,42 +1,31 @@
 #pragma once
+#include "camera.h"
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
 #include "stb_image.h"
 
+#ifndef GLM_H
+#define GLM_H
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#endif
 
 #include "shaders.h"
 #include <map>
-
-
 
 namespace renderer
 {
 	#define SWIDTH 800
 	#define SHEIGHT 600
 
-	glm::vec3 getCameraPos();
-	void setCameraPos(glm::vec3 camPos);
-	
-	glm::vec3 getCameraFront();
-	void setCameraFront(glm::vec3 camFron);
+	camera* getCamera();
+	void setCamera(camera* cam);
 
-	glm::vec3 getCameraUp();
-	void setCameraUp(glm::vec3 camU);
-
-
-	float getYaw();
-	void setYaw(float ya);
-
-	float getPitch();
-	void setPitch(float pitc);
-
-	float getFov();
-	void setFov(float fo);
-
+	glm::vec3 faceNormal(glm::vec3 p1, glm::vec3 p2, glm::vec3 p3);
+	float* genFaceNormals(float* verticies, unsigned int faceCnt);
 
 	struct texParam2D
 	{
@@ -64,6 +53,7 @@ namespace renderer
 	{
 		Shader* shader;
 		unsigned int VAO, VBO, drawType;
+		float* faceNormals;
 		bool updated = false;
 		glm::mat4 trans = glm::mat4(1.0f);
 		std::string UID = "";
@@ -90,9 +80,10 @@ namespace renderer
 	struct Basic : Base
 	{
 		float* vertices;
+		float* colors;
 		GLsizei vertCnt;
 
-		Basic(float vertices[], GLsizei vertCnt, GLsizei stride, Shader* shader, unsigned int drawType = GL_DYNAMIC_DRAW);
+		Basic(float vertices[], float colors[], GLsizei vertCnt, Shader* shader, unsigned int drawType = GL_DYNAMIC_DRAW);
 
 		void draw();
 	};
@@ -100,14 +91,29 @@ namespace renderer
 	struct BasicTextured : Base
 	{
 		float* vertices;
+		float* colors;
+		float* texturecords;
 		GLsizei vertCnt;
 		texture2D* texture;
 
-		BasicTextured(float vertices[], GLsizei vertCnt, GLsizei stride, Shader* shader, texture2D* texture, unsigned int drawType = GL_DYNAMIC_DRAW);
+		BasicTextured(float vertices[], float colors[], float texturecords[], GLsizei vertCnt, Shader* shader, texture2D* texture, unsigned int drawType = GL_DYNAMIC_DRAW);
 
 		void draw();
 	};
 
+	struct PointLight : Base
+	{
+		float* vertices;
+		GLsizei vertCnt;
+		glm::vec3 lightpos;
+		glm::vec3 lightcolor;
+
+		PointLight(float vertices[], GLsizei vertCnt, Shader* shader, glm::vec3 lightcolor, glm::vec3 lightpos, unsigned int drawType = GL_DYNAMIC_DRAW);
+
+		void translate(glm::vec3 transxyz);
+
+		void draw();
+	};
 
 	std::map<std::string, Base*>* getActive();
 	std::map<std::string, Base*>* getMemory();

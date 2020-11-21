@@ -17,6 +17,7 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) //this
 
 void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 {
+    camera* cam = renderer::getCamera();
     if (firstMouse)
     {
         lastX = xpos;
@@ -29,47 +30,38 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos)
     lastX = xpos;
     lastY = ypos;
 
-    double sensitivity = 0.1f;
-    xoffset *= sensitivity;
-    yoffset *= sensitivity;
+    xoffset *= cam->sensitivity;
+    yoffset *= cam->sensitivity;
 
-    renderer::setYaw(renderer::getYaw() + xoffset);
-    renderer::setPitch(renderer::getPitch() + yoffset);
-
-    if (renderer::getPitch() > 89.0f)
-        renderer::setPitch(89.0f);
-    if (renderer::getPitch() < -89.0f)
-        renderer::setPitch(-89.0f);
+    cam->moveYaw(xoffset);
+    cam->movePitch(yoffset);
 
     glm::vec3 direction;
-    direction.x = cos(glm::radians(renderer::getYaw())) * cos(glm::radians(renderer::getPitch()));
-    direction.y = sin(glm::radians(renderer::getPitch()));
-    direction.z = sin(glm::radians(renderer::getYaw())) * cos(glm::radians(renderer::getPitch()));
-    renderer::setCameraFront(glm::normalize(direction));
+    direction.x = cos(float(glm::radians(cam->getYaw()))) * cos(float(glm::radians(cam->getPitch())));
+    direction.y = sin(float(glm::radians(cam->getPitch())));
+    direction.z = sin(float(glm::radians(cam->getYaw()))) * cos(float(glm::radians(cam->getPitch())));
+    cam->front = glm::normalize(direction);
 }
 
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
-    renderer::setFov(renderer::getFov() - (float)yoffset);
-    if (renderer::getFov() < 1.0f)
-        renderer::setFov(1.0f);
-    if (renderer::getFov() > 45.0f)
-        renderer::setFov(45.0f);
+    renderer::getCamera()->moveFov(-yoffset);
 }
 
 void processInput(GLFWwindow* window) //Processes user input
 {
-    float cameraSpeed = 2.5 * deltaTime;
+    camera* cam = renderer::getCamera();
+    float cameraSpeed = cam->speed * deltaTime;
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-        renderer::setCameraPos(renderer::getCameraPos() + cameraSpeed * renderer::getCameraFront());
+        cam->pos += cameraSpeed * cam->front;
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-        renderer::setCameraPos(renderer::getCameraPos() - cameraSpeed * renderer::getCameraFront());
+        cam->pos -= cameraSpeed * cam->front;
     if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-        renderer::setCameraPos(renderer::getCameraPos() - glm::normalize(glm::cross(renderer::getCameraFront(), renderer::getCameraUp())) * cameraSpeed);
+        cam->pos -= glm::normalize(glm::cross(cam->front, cam->up)) * cameraSpeed;
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-        renderer::setCameraPos(renderer::getCameraPos() + glm::normalize(glm::cross(renderer::getCameraFront(), renderer::getCameraUp())) * cameraSpeed);
+        cam->pos += glm::normalize(glm::cross(cam->front, cam->up)) * cameraSpeed;
 }
 
 std::map<std::string, Shader>* shaders;
@@ -106,43 +98,171 @@ int main()
 
     compileShaders();
     shaders = getShaders();
+
+    camera cam = camera(glm::vec3(0.0, 0.0, 0.0));
+    renderer::setCamera(&cam);
     
     float vertices[] = {
-        // positions         // colors         
-         0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f, // bottom right
-        -0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f, // bottom left
-         0.0f,  0.5f, 0.0f,  0.0f, 0.0f, 1.0f  // top 
+        // positions        
+         0.5f, -0.5f, 0.0f,   // bottom right
+        -0.5f, -0.5f, 0.0f,   // bottom left
+         0.0f,  0.5f, 0.0f    // top 
     };
-    
-    renderer::Basic triangle(vertices, 3, 6, &shaders->at("basicEX"));
+
+    float colors[] = {
+        1.0f, 0.0f, 0.0f,
+        0.0f, 1.0f, 0.0f,
+        0.0f, 0.0f, 1.0f
+    };
+
+    renderer::Basic triangle(vertices, colors, 3, &shaders->at("basicEX"));
     triangle.addToActive("basicEX1");
 
-    renderer::Basic triangle2(vertices, 3, 6, &shaders->at("basicEX"));
+    renderer::Basic triangle2(vertices, colors, 3, &shaders->at("basicEX"));
     triangle2.addToActive("basicEX2");
     triangle2.scale(glm::vec3(0.5f, 0.5f, 0.5f));
     triangle2.translate(glm::vec3(0.0, -0.5f, 0.0f));
     
     
     float vertices2[] = {
-        // positions          // colors           // texture coords
-        0.5f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f, // top right
-        0.5f, -0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f, // bottom right
-       -0.5f,  0.5f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f,  // top left 
+        // positions      
+        0.5f,  0.5f, 0.0f,    // top right
+        0.5f, -0.5f, 0.0f,    // bottom right
+       -0.5f,  0.5f, 0.0f,    // top left 
 
-        0.5f, -0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f, // bottom right
-       -0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f, // bottom left
-       -0.5f,  0.5f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f  // top left
+        0.5f, -0.5f, 0.0f,    // bottom right
+       -0.5f, -0.5f, 0.0f,    // bottom left
+       -0.5f,  0.5f, 0.0f     // top left
+    };
+
+    float colors2[] = {
+        1.0f, 0.0f, 0.0f,
+        0.0f, 1.0f, 0.0f,
+        1.0f, 1.0f, 0.0f,
+
+        0.0f, 1.0f, 0.0f,
+        0.0f, 0.0f, 1.0f,
+        1.0f, 1.0f, 0.0f
+    };
+
+    float texcord[] = {
+        1.0f, 1.0f,
+        1.0f, 0.0f,
+        0.0f, 1.0f,
+
+        1.0f, 0.0f,
+        0.0f, 0.0f,
+        0.0f, 1.0f
     };
     
     renderer::texParam2D params = renderer::texParam2D(GL_REPEAT, GL_REPEAT, GL_LINEAR, GL_LINEAR);
     renderer::texture2D texture = renderer::texture2D(&params, "container.jpg");
 
-    renderer::BasicTextured crate(vertices2, 6, 8, &shaders->at("basicTexEX"), &texture);
+    renderer::BasicTextured crate(vertices2, colors2, texcord, 6, &shaders->at("basicTexEX"), &texture);
     crate.addToActive("basicTexEX1");
     crate.translate(glm::vec3(-0.5f, 0.5f, 0.0f));
     crate.scale(glm::vec3(0.5f, 0.5f, 0.5f));
+    
+    float vertices3[] = {
+        -0.5f, -0.5f, -0.5f, 
+         0.5f, -0.5f, -0.5f, 
+         0.5f,  0.5f, -0.5f, 
+         0.5f,  0.5f, -0.5f,
+        -0.5f,  0.5f, -0.5f, 
+        -0.5f, -0.5f, -0.5f, 
 
-    glfwSwapInterval(0); //this is Vsync
+        -0.5f, -0.5f,  0.5f, 
+         0.5f, -0.5f,  0.5f,  
+         0.5f,  0.5f,  0.5f, 
+         0.5f,  0.5f,  0.5f, 
+        -0.5f,  0.5f,  0.5f,  
+        -0.5f, -0.5f,  0.5f,  
+
+        -0.5f,  0.5f,  0.5f, 
+        -0.5f,  0.5f, -0.5f, 
+        -0.5f, -0.5f, -0.5f, 
+        -0.5f, -0.5f, -0.5f,
+        -0.5f, -0.5f,  0.5f, 
+        -0.5f,  0.5f,  0.5f,
+
+         0.5f,  0.5f,  0.5f,  
+         0.5f,  0.5f, -0.5f,
+         0.5f, -0.5f, -0.5f, 
+         0.5f, -0.5f, -0.5f,  
+         0.5f, -0.5f,  0.5f,  
+         0.5f,  0.5f,  0.5f,  
+
+        -0.5f, -0.5f, -0.5f, 
+         0.5f, -0.5f, -0.5f, 
+         0.5f, -0.5f,  0.5f, 
+         0.5f, -0.5f,  0.5f, 
+        -0.5f, -0.5f,  0.5f, 
+        -0.5f, -0.5f, -0.5f,  
+
+        -0.5f,  0.5f, -0.5f, 
+         0.5f,  0.5f, -0.5f, 
+         0.5f,  0.5f,  0.5f,  
+         0.5f,  0.5f,  0.5f,  
+        -0.5f,  0.5f,  0.5f, 
+        -0.5f,  0.5f, -0.5f
+    };
+
+    float vertices3col[] = {
+        0.5f, 0.5f, 0.5f,
+         0.5f, 0.5f, 0.5f,
+         0.5f,  0.5f, 0.5f,
+         0.5f,  0.5f, 0.5f,
+        0.5f,  0.5f, 0.5f,
+        0.5f, 0.5f, 0.5f,
+
+        0.5f, 0.5f,  0.5f,
+         0.75f, 0.75f,  0.5f,
+         0.5f,  0.75f,  0.5f,
+         0.5f,  0.5f,  0.75f,
+        0.5f,  0.5f,  0.75f,
+        0.5f, 0.5f,  0.5f,
+
+        0.5f,  0.5f,  0.5f,
+        0.5f,  0.5f, 0.5f,
+        0.5f, 0.5f, 0.5f,
+        0.5f, 0.5f, 0.5f,
+        0.5f, 0.5f,  0.5f,
+        0.5f,  0.5f,  0.5f,
+
+         0.75f,  0.5f,  0.5f,
+         0.5f,  0.5f, 0.75f,
+         0.5f, 0.75f, 0.5f,
+         0.5f, 0.75f, 0.5f,
+         0.5f, 0.5f,  0.5f,
+         0.5f,  0.5f,  0.5f,
+
+        0.5f, 0.5f, 0.5f,
+         0.5f, 0.5f, 0.75f,
+         0.75f, 0.75f,  0.5f,
+         0.5f, 0.5f,  0.5f,
+        0.5f, 0.5f,  0.5f,
+        0.5f, 0.75f, 0.5f,
+
+        0.75f,  0.5f, 0.5f,
+         0.75f,  0.5f, 0.5f,
+         0.75f,  0.5f,  0.5f,
+         0.5f,  0.5f,  0.5f,
+        0.5f,  0.75f,  0.5f,
+        0.5f,  0.5f, 0.75f
+    };
+
+    renderer::PointLight light(vertices3, 36, &shaders->at("pointLight"), glm::vec3(1.0f, 0.9f, 0.0f), glm::vec3(0.0f,0.0f,0.0f));
+    light.addToActive("light");
+    light.translate(glm::vec3(1.1f, 0.0f, 1.1f));
+    light.scale(glm::vec3(0.1f,0.1f,0.1f));
+    
+
+    renderer::Basic cube(vertices3, vertices3, 36, &shaders->at("basicEX"));
+    cube.addToActive("tube");
+    cube.scale(glm::vec3(0.5f, 0.5f, 0.5f));
+    cube.translate(glm::vec3(0.0f, 0.0f, 1.0f));
+
+    //glfwSwapInterval(1); //this is Vsync
     glEnable(GL_DEPTH_TEST);
 
     //doClear(false);
@@ -152,11 +272,13 @@ int main()
         deltaTime = currentTime - lastFrame;
         lastFrame = currentTime;
         processInput(window);
-
         render(window);
         triangle2.rotate(-0.02f, glm::vec3(1.0f, 0.0f, 0.0f));
         triangle.rotate(0.02f, glm::vec3(0.0f, 1.0f, 0.0f));
         crate.rotate(0.02f, glm::vec3(0.0f, 0.0f, 1.0f));
+
+        cube.rotate(0.02f, glm::vec3(0.0f, 1.0f, 0.0f));
+
 
         glfwSwapBuffers(window);
 
