@@ -15,6 +15,8 @@ bool compileShaders()
 	bool res = true;
 	res &= shaders.insert(std::pair<std::string, Shader>("basicEX", Shader("basicEX.vs", "basicEX.fs"))).second;
 	res &= shaders.insert(std::pair<std::string, Shader>("basicTexEX", Shader("basicTexEX.vs", "basicTexEX.fs"))).second;
+	res &= shaders.insert(std::pair<std::string, Shader>("basicMaterial", Shader("basicMaterial.vs", "basicMaterial.fs"))).second;
+	res &= shaders.insert(std::pair<std::string, Shader>("texturedMaterial", Shader("texturedMaterial.vs", "texturedMaterial.fs"))).second;
 	res &= shaders.insert(std::pair<std::string, Shader>("pointLight", Shader("pointLight.vs", "pointLight.fs"))).second;
 	return res;
 }

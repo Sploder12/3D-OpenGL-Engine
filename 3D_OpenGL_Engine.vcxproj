@@ -163,10 +163,16 @@
   <ItemGroup>
     <None Include="basicEX.fs" />
     <None Include="basicEX.vs" />
+    <None Include="basicMaterial.fs" />
     <None Include="basicTexEX.fs" />
     <None Include="basicTexEX.vs" />
     <None Include="pointLight.fs" />
     <None Include="pointLight.vs" />
+    <None Include="texturedMaterial.fs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="basicMaterial.vs" />
+    <Text Include="texturedMaterial.vs" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

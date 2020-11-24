@@ -79,5 +79,19 @@
     <None Include="pointLight.fs">
       <Filter>Shaders</Filter>
     </None>
+    <None Include="basicMaterial.fs">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="texturedMaterial.fs">
+      <Filter>Shaders</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="basicMaterial.vs">
+      <Filter>Shaders</Filter>
+    </Text>
+    <Text Include="texturedMaterial.vs">
+      <Filter>Shaders</Filter>
+    </Text>
   </ItemGroup>
 </Project>
